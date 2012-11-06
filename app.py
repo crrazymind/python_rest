@@ -9,6 +9,7 @@ import hmac
 import user
 import json
 import sys
+import os
 from bottle import get, post, request
 from bson import BSON
 from bson import json_util
@@ -65,7 +66,6 @@ def api_put():
 
 
 bottle.debug(True)
-#port = int(os.environ.get("PORT", 5000))
-port = 5000
-#bottle.run(host='0.0.0.0', port=port)
-bottle.run(host='127.0.0.1', port=port)
+port = int(os.environ.get("PORT", 5000))
+bottle.run(host='0.0.0.0', port=port)
+#bottle.run(host='127.0.0.1', port=port)

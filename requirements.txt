@@ -1,0 +1,2 @@
+Bottle>=0.1
+PyMongo>=0.1
