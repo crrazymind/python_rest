@@ -15,6 +15,7 @@ from itertools import izip
 from bottle import get, post, request, put
 from bson import BSON
 from bson import json_util
+from bson.objectid import ObjectId
 
 #connection_string = "mongodb://localhost"
 connection_string = "mongodb://admin:mongo_admin@staff.mongohq.com:10009/app3605825"
@@ -34,15 +35,28 @@ def hello_page():
 
 
 def makeJson(data):
-    return json.dumps(data, sort_keys=True, indent=0, default=json_util.default)
+    return json.dumps(data, sort_keys=True, indent=4, default=json_util.default)
 
 
-def makeJSONP(request, data):
+def getAllJSONP(request, data):
     if request.query.get('callback'):
         bottle.response.content_type = 'application/json'
         data = ''.join(['%s,%s' % (key, value) for (key, value) in data.items()])
         data = data.rstrip()
         return ''.join([request.query.get('callback'), '({items:[', data, ']})'])
+    else:
+        return data
+
+
+def makeJSONP(request, data):
+    if request.query.get('callback'):
+        bottle.response.content_type = 'application/json'
+        if type(data) is str:
+            return ''.join([request.query.get('callback'), '(', data, ')'])
+        else:
+            data = ''.join(['%s,%s' % (key, value) for (key, value) in data.items()])
+            data = data.rstrip()
+            return ''.join([request.query.get('callback'), '({items:[', data, ']})'])
     else:
         return data
 
@@ -60,9 +74,8 @@ def api():
         result.append(makeJson(item))
     i = iter(result)
     result = dict(izip(i, i))
-    #result = {'items':result}
     bottle.response.set_header('Access-Control-Allow-Origin', '*')
-    return makeJSONP(bottle.request, result)
+    return getAllJSONP(bottle.request, result)
 
 
 @get('/api/<id>')
@@ -71,26 +84,23 @@ def api_other(id):
     result = []
     if id == "undefined":
         return makeJSONP(bottle.request, result)
-    if bottle.request.json:
-        return process_Json(bottle.request.json)
-    else:
-        updateItem(bottle.request.query.get("data"), id)
-    data = db.items_bb.find()
-    for item in data:
-        result.append(makeJson(item))
-    i = iter(result)
-    result = dict(izip(i, i))
+    method = bottle.request.query.get("_method")
+    data = bottle.request.query.get("items")
     bottle.response.set_header('Access-Control-Allow-Origin', '*')
-    return makeJSONP(bottle.request, result)
+    if method == "update":
+        return updateItem(data, id)
+    if method == "delete":
+        return deleteItem(id)
+    return makeJSONP(bottle.request, "console.log({status:'wrong _method parameter'})")
 
 
 def updateItem(data, id):
     data = json.loads(data)
-    #data = json.dumps(data)
-    print db.items_bb.count({'id': id})
-    res = db.items_bb.update({'_id': id}, grabData(data), upsert=False)
-    print type(id)
-    print '**', res
+    print ""
+    print "about to update item " + id
+    res = db.items_bb.update({"_id": ObjectId(id)}, grabData(data))
+    print res
+    return makeJSONP(bottle.request, "console.log({status : '" + id + " update was successful'})")
 
 
 def grabData(source):
