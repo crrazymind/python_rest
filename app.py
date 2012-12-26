@@ -41,7 +41,7 @@ def makeJson(data):
 def getAllJSONP(request, data):
     if request.query.get('callback'):
         bottle.response.content_type = 'application/json'
-        data = ''.join(['%s,%s' % (key, value) for (key, value) in data.items()])
+        data = ''.join(['%s,%s,' % (key, value) for (key, value) in data.items()])
         data = data.rstrip()
         return ''.join([request.query.get('callback'), '({items:[', data, ']})'])
     else:
@@ -75,6 +75,7 @@ def api():
     i = iter(result)
     result = dict(izip(i, i))
     bottle.response.set_header('Access-Control-Allow-Origin', '*')
+    print "plain get method called"
     return getAllJSONP(bottle.request, result)
 
 
@@ -82,9 +83,13 @@ def api():
 def api_other(id):
     print id
     result = []
-    if id == "undefined":
-        return makeJSONP(bottle.request, result)
     method = bottle.request.query.get("_method")
+    #if not id:
+        #print method
+        #if method == "create":
+        #    return createItem(bottle.request.query.get("items"))
+        #else:
+        #    return makeJSONP(bottle.request, result)
     data = bottle.request.query.get("items")
     bottle.response.set_header('Access-Control-Allow-Origin', '*')
     if method == "update":
@@ -94,6 +99,15 @@ def api_other(id):
     return makeJSONP(bottle.request, "console.log({status:'wrong _method parameter'})")
 
 
+def createItem(data):
+    data = json.loads(data)
+    print ""
+    print "about to create item "
+    res = db.items_bb.insert(grabData(data))
+    print res
+    return makeJSONP(bottle.request, "console.log({status : '" + "23232" + " update was successful'})")
+
+
 def updateItem(data, id):
     data = json.loads(data)
     print ""
@@ -101,6 +115,15 @@ def updateItem(data, id):
     res = db.items_bb.update({"_id": ObjectId(id)}, grabData(data))
     print res
     return makeJSONP(bottle.request, "console.log({status : '" + id + " update was successful'})")
+
+
+def deleteItem(id):
+    #data = json.loads(data)
+    #print ""
+    #print "about to update item " + id
+    #res = db.items_bb.update({"_id": ObjectId(id)}, grabData(data))
+    #print res
+    return makeJSONP(bottle.request, "console.log({status : '" + id + " deleted'})")
 
 
 def grabData(source):
