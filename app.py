@@ -1,7 +1,5 @@
 import bottle
-
 import pymongo
-import cgi
 import re
 import datetime
 import random
@@ -16,9 +14,11 @@ from bottle import get, post, request, put
 from bson import BSON
 from bson import json_util
 from bson.objectid import ObjectId
+import pyjade
+
 
 #connection_string = "mongodb://localhost"
-connection_string = "mongodb://admin:mongo_admin@staff.mongohq.com:10009/app3605825"
+connection_string = "mongodb://admin:admin@db_url"
 connection = pymongo.Connection(connection_string, safe=True)
 db = connection['app3605825']
 data_shema = ["cost", "done", "duration", "eta", "link", "title"]
@@ -79,17 +79,32 @@ def api():
     return getAllJSONP(bottle.request, result)
 
 
+@get('/showDetails/<id>')
+def showDetails(id):
+    result = []
+    print "about to get items with: " + id
+    #data = db.items_bb.find({}, {'title':1, 'cost':1, 'duration':1, 'eta':1, 'title':1,'_id':0})
+    data = db.items_bb.find()
+    for item in data:
+        result.append(makeJson(item))
+    i = iter(result)
+    result = dict(izip(i, i))
+    bottle.response.set_header('Access-Control-Allow-Origin', '*')
+    print "plain get method called"
+    return getAllJSONP(bottle.request, result)
+
+
 @get('/api/<id>')
 def api_other(id):
     print id
     result = []
     method = bottle.request.query.get("_method")
-    #if not id:
-        #print method
-        #if method == "create":
-        #    return createItem(bottle.request.query.get("items"))
+    if id == "undefined":
+        print method
+        if method == "update":
+            return createItem(bottle.request.query.get("items"))
         #else:
-        #    return makeJSONP(bottle.request, result)
+            #return makeJSONP(bottle.request, result)
     data = bottle.request.query.get("items")
     bottle.response.set_header('Access-Control-Allow-Origin', '*')
     if method == "update":
@@ -105,7 +120,7 @@ def createItem(data):
     print "about to create item "
     res = db.items_bb.insert(grabData(data))
     print res
-    return makeJSONP(bottle.request, "console.log({status : '" + "23232" + " update was successful'})")
+    return makeJSONP(bottle.request, "function(){$.taskList.updateQueue.stack.push('" + str(res) + "'); $.taskList.updateQueue.flush();}()")
 
 
 def updateItem(data, id):
@@ -120,9 +135,9 @@ def updateItem(data, id):
 def deleteItem(id):
     #data = json.loads(data)
     #print ""
-    #print "about to update item " + id
-    #res = db.items_bb.update({"_id": ObjectId(id)}, grabData(data))
-    #print res
+    print "about to delete item " + id
+    res = db.items_bb.remove({"_id": ObjectId(id)})
+    print res
     return makeJSONP(bottle.request, "console.log({status : '" + id + " deleted'})")
 
 
@@ -168,5 +183,5 @@ def api_put():
 
 bottle.debug(True)
 port = int(os.environ.get("PORT", 5000))
-bottle.run(host='0.0.0.0', port=port, reloader='true', interval=1)
+bottle.run(host='0.0.0.0', port=port, reloader='true', interval=0.1)
 #bottle.run(host='127.0.0.1', port=port)
